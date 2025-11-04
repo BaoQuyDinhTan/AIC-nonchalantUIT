@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Search Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f9f9f9;
+            display: flex;
+            height: 100vh;
+        }
+        
+        .video-block {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px 0;
+            background: #fff;
+            border-radius: 6px;
+        }
+
+        .video-block h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .frame-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+
+
+        /* Sidebar for tools */
+        #sidebar {
+            width: 280px;
+            background: #fff;
+            border-right: 1px solid #ddd;
+            padding: 15px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        #main {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        h2 {
+            font-size: 16px;
+            margin: 12px 0 6px;
+            color: #333;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 95%;
+            padding: 6px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 13px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 8px 12px;
+            margin: 3px 0;
+            width: 100%;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        button.blue { background: #2196F3; color: white; }
+        button.green { background: #4CAF50; color: white; }
+        button.orange { background: #FF9800; color: white; }
+        button.purple { background: #9C27B0; color: white; }
+        button:hover { opacity: 0.9; }
+
+        /* Results grid */
+        #results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+        }
+
+        .image-container {
+            border: 2px solid transparent;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+            transition: border 0.2s, transform 0.1s;
+            text-align: center;
+            padding: 5px;
+        }
+        .image-container img {
+            max-width: 100%;
+            max-height: 110px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .image-container.selected {
+            border: 3px solid #4CAF50;
+        }
+
+        .image-info {
+            margin-top: 3px;
+            font-size: 11px;
+            color: #555;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #selected-count {
+            font-weight: bold;
+            margin: 8px 0;
+            color: #444;
+        }
+
+        .advanced-options {
+            margin-top: 6px;
+            padding: 6px;
+            border: 1px dashed #ccc;
+            border-radius: 6px;
+            background: #fafafa;
+            display: none;
+        }
+
+        #selected-actions {
+            margin: 8px 0;
+        }
+
+        #loading {
+            display: none;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Sidebar with all controls -->
+    <div id="sidebar">
+        <h3>Query number</h3>
+        <input type="text" id="query-num" placeholder="Query #">
+
+        <h2>▶ Frame actions</h2>
+        <div id="selected-count">No frames selected</div>
+        <div id="selected-actions" style="display:none;">
+            <button class="blue" id="find-similar-btn">Find Similar</button>
+            <button class="orange" id="go-to-video-btn">Go to Video</button>
+        </div>
+
+        <h2>🔍 Search</h2>
+        <input type="text" id="search-input" placeholder="Enter search query...">
+        <input type="text" id="video-input" placeholder="Restrict to video (optional)">
+        <button class="blue" id="search-button">Search</button>
+        <div id="loading">Searching...</div>
+
+        <h2>📊 Export Tools</h2>
+        
+        <input type="text" id="qa-answer" placeholder="Answer (QA only)">
+        <button class="green" id="export-kis-btn">Export KIS</button>
+        <button class="green" id="export-qa-btn">Export QA</button>
+
+        <h2>🧩 Subqueries & TRAKE</h2>
+        <input type="text" id="trake-video" placeholder="Video name">
+        <input type="text" id="subquery-id" placeholder="Subquery ID">
+        <button class="orange" id="save-subquery-btn">Save Subquery</button>
+        <input type="text" id="subquery-ids" placeholder="IDs (1,2,3)">
+        <button class="purple" id="export-trake-btn">Export TRAKE</button>
+
+        <h2>🔍 Multi Search</h2>
+        <textarea id="multi-search-input" rows="5" placeholder="Enter multiple queries, one per line..."></textarea>
+        <input type="text" id="multi-video-input" placeholder="Restrict to video (optional)">
+        <button class="blue" id="multi-search-button">Multi Search</button>
+        <div id="multi-loading" style="display:none;">Searching...</div>
+
+
+        <label style="display:block; margin-top:6px;">
+            <input type="checkbox" id="special-mode"> Special Mode
+        </label>
+        <div class="advanced-options" id="advanced-options">
+            <input type="text" id="export-video" placeholder="Export video (e.g., L10_V001)">
+            <input type="number" id="export-second" placeholder="Second (e.g., 120)">
+            <input type="number" id="neg-delta" placeholder="-delta (default 10)">
+            <input type="number" id="pos-delta" placeholder="+delta (default 10)">
+        </div>
+
+        <h1>NonchalantUIT</h1>
+    </div>
+
+    <!-- Main content: results -->
+    <div id="main">
+        <h2>📸 Results</h2>
+        <div id="results"></div>
+    </div>
+
+<script>
+    let selectedImage = null;
+
+    // Toggle advanced options
+    document.getElementById("special-mode").addEventListener("change", function() {
+        document.getElementById("advanced-options").style.display = this.checked ? "block" : "none";
+    });
+
+    function collectSelectedFrames() {
+        const selectedEls = document.querySelectorAll(".image-container.selected, .image-container");
+        return Array.from(selectedEls).slice(0, 100).map(el => {
+            return {
+                video: el.querySelector(".image-info").textContent.split(" - ")[0],
+                frameid: el.querySelector(".image-info").textContent.split("Frame ")[1]
+            };
+        });
+    }
+
+    function updateSelectedCount() {
+        const count = document.querySelectorAll(".image-container.selected").length;
+        document.getElementById("selected-count").textContent =
+            count > 0 ? `${count} frame(s) selected` : "No frames selected";
+        document.getElementById("selected-actions").style.display = count === 1 ? "block" : "none";
+    }
+
+    function exportResults(url, extra={}) {
+        const queryNum = document.getElementById("query-num").value || "1";
+        const selected = collectSelectedFrames();
+        const body = {
+            query_num: queryNum,
+            selected: selected,
+            answer: document.getElementById("qa-answer").value,
+            export_video: document.getElementById("export-video").value,
+            specific_second: document.getElementById("export-second").value,
+            neg_delta: document.getElementById("neg-delta").value,
+            pos_delta: document.getElementById("pos-delta").value,
+            special_mode: document.getElementById("special-mode").checked,
+            ...extra
+        };
+
+        fetch(url, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+        })
+        .then(resp => {
+            if (url.includes("kis") || url.includes("qa") || url.includes("trake")) {
+                return resp.blob().then(blob => ({ blob }));
+            }
+            return resp.json();
+        })
+        .then(data => {
+            if (data.blob) {
+                const link = document.createElement("a");
+                link.href = window.URL.createObjectURL(data.blob);
+                link.download = url.includes("kis") ? `query-${queryNum}-kis.csv`
+                            : url.includes("qa") ? `query-${queryNum}-qa.csv`
+                            : `query-${queryNum}-trake.csv`;
+                link.click();
+            } else {
+                alert(data.message || JSON.stringify(data));
+            }
+        });
+    }
+
+    // Event bindings
+    document.getElementById("search-button").addEventListener("click", () => performSearch());
+    document.getElementById("export-kis-btn").addEventListener("click", () => exportResults("/export/kis"));
+    document.getElementById("export-qa-btn").addEventListener("click", () => exportResults("/export/qa"));
+    document.getElementById("save-subquery-btn").addEventListener("click", () => {
+        const subId = document.getElementById("subquery-id").value;
+        const video = document.getElementById("trake-video").value;
+        if (!subId || !video) {
+            alert("Subquery ID and Video are required");
+            return;
+        }
+        exportResults("/save-subquery", { sub_id: subId, video: video });
+    });
+    document.getElementById("export-trake-btn").addEventListener("click", () => {
+        const queryNum = document.getElementById("query-num").value || "1";
+        const video = document.getElementById("trake-video").value;
+        const subIds = document.getElementById("subquery-ids").value.split(",").map(s => s.trim()).filter(s => s);
+        exportResults("/export/trake", { video: video, sub_ids: subIds, query_num: queryNum });
+    });
+
+    document.getElementById("find-similar-btn").addEventListener("click", () => {
+        if (selectedImage) {
+            performSearch(selectedImage.video, selectedImage.frameid);
+        }
+    });
+
+    document.getElementById("go-to-video-btn").addEventListener("click", () => {
+        if (selectedImage) {
+            fetch(`/media-info/${selectedImage.video}/${selectedImage.frameid}`)
+                .then(resp => resp.json())
+                .then(data => {
+                    if (data.watch_url_with_timestamp) {
+                        window.open(data.watch_url_with_timestamp, "_blank");
+                    } else if (data.watch_url) {
+                        window.open(data.watch_url, "_blank");
+                    } else {
+                        alert("No video link found.");
+                    }
+                });
+        }
+    });
+
+    function performSearch(referenceVideo = null, referenceFrame = null) {
+        const query = document.getElementById("search-input").value;
+        const restrictVideo = document.getElementById("video-input").value;
+
+        if (!query && !referenceVideo) return;
+
+        const loading = document.getElementById("loading");
+        const results = document.getElementById("results");
+        loading.style.display = "block";
+        results.innerHTML = "";
+
+        fetch("/search", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                query: query,
+                reference_video: referenceVideo,
+                reference_frame: referenceFrame,
+                restrict_video: restrictVideo || null
+            })
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            loading.style.display = "none";
+            if (data.error) {
+                results.innerHTML = `<p>Error: ${data.error}</p>`;
+                return;
+            }
+            data.results.forEach(result => {
+                const container = document.createElement("div");
+                container.className = "image-container";
+
+                const img = document.createElement("img");
+                img.src = result.path;
+                img.alt = `${result.video} - ${result.frameid}`;
+
+                const info = document.createElement("div");
+                info.className = "image-info";
+                info.textContent = `${result.video} - Frame ${result.frameid}`;
+
+                container.appendChild(img);
+                container.appendChild(info);
+
+                container.addEventListener("click", () => {
+                    document.querySelectorAll(".image-container").forEach(el => el.classList.remove("selected"));
+                    container.classList.add("selected");
+                    selectedImage = { video: result.video, frameid: result.frameid };
+                    updateSelectedCount();
+                });
+
+                results.appendChild(container);
+            });
+            updateSelectedCount();
+        });
+    }
+
+    document.getElementById("multi-search-button").addEventListener("click", () => {
+        const queries = document.getElementById("multi-search-input").value
+                        .split("\n").map(s => s.trim()).filter(s => s);
+        const restrictVideo = document.getElementById("multi-video-input").value;
+
+        if (queries.length === 0) return;
+
+        const loading = document.getElementById("multi-loading");
+        const results = document.getElementById("results");
+        loading.style.display = "block";
+        results.innerHTML = "";
+
+        fetch("/multi-search", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({ queries: queries, restrict_video: restrictVideo || null })
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                loading.style.display = "none";
+                results.innerHTML = "";
+
+                if (data.error) {
+                    results.innerHTML = `<p>Error: ${data.error}</p>`;
+                    return;
+                }
+
+                data.results.forEach(item => {
+                    const videoBlock = document.createElement("div");
+                    videoBlock.className = "video-block";
+
+                    // Header with clickable video title
+                    const header = document.createElement("h3");
+                    header.textContent = `Video: ${item.video} (Avg Score: ${item.avg_score.toFixed(3)})`;
+                    header.style.cursor = "pointer";
+                    header.style.color = "#2196F3";
+                    header.addEventListener("click", () => {
+                        selectedVideo = item.video; // store current video
+                        alert(`Selected video: ${item.video}. Now click "Go to Video"`);
+                    });
+                    videoBlock.appendChild(header);
+
+                    // Frames container
+                    const frameContainer = document.createElement("div");
+                    frameContainer.className = "frame-container";
+
+                    item.frames.forEach(f => {
+                        const frameBox = document.createElement("div");
+                        frameBox.className = "image-container";
+
+                        if (f.path) {
+                            const img = document.createElement("img");
+                            img.src = f.path;
+                            img.alt = `${item.video} - Frame ${f.frameid}`;
+                            frameBox.appendChild(img);
+                        }
+
+                        const info = document.createElement("div");
+                        info.className = "image-info";
+                        info.textContent = f.frameid
+                            ? `Query ${f.query_idx + 1} | Score: ${f.score.toFixed(3)} | Frame ${f.frameid}`
+                            : `Query ${f.query_idx + 1} | No match (Score: 0.0)`;
+
+                        frameBox.appendChild(info);
+                        frameContainer.appendChild(frameBox);
+
+                        // Allow clicking a frame to set it as "selectedImage"
+                        frameBox.addEventListener("click", () => {
+                            document.querySelectorAll(".image-container").forEach(el => el.classList.remove("selected"));
+                            frameBox.classList.add("selected");
+                            selectedImage = { video: item.video, frameid: f.frameid };
+                            selectedVideo = item.video;
+                            updateSelectedCount();
+                        });
+                    });
+
+                    videoBlock.appendChild(frameContainer);
+                    results.appendChild(videoBlock);
+                });
+            });
+    });
+
+</script>
+</body>
+</html>
